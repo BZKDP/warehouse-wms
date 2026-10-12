@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Прозрачное стекло — кнопки складов</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 60px 40px;
+    /* Фон как на сайте — светлый */
+    background: #f5f5f7;
+  }
+
+  h1 { font-size: 13px; font-weight: 700; color: rgba(0,0,0,0.25); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+  .section { margin-bottom: 50px; }
+  .label { font-size: 11px; color: rgba(0,0,0,0.3); margin-bottom: 16px; }
+
+  /* === ПРОЗРАЧНОЕ СТЕКЛО === */
+  .glass-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 50px; /* pill shape как на картинке */
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    color: rgba(0,0,0,0.6);
+    /* Полностью прозрачный фон с едва заметным белым */
+    background: rgba(255,255,255,0.08);
+    /* Тонкая белая рамка — ключевой элемент */
+    border: 1px solid rgba(255,255,255,0.5);
+    border-top-color: rgba(255,255,255,0.7);
+    border-left-color: rgba(255,255,255,0.6);
+    border-bottom-color: rgba(255,255,255,0.2);
+    border-right-color: rgba(255,255,255,0.3);
+    /* Тень снизу */
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.04),
+      0 4px 12px rgba(0,0,0,0.02),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-btn:hover {
+    background: rgba(255,255,255,0.18);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.06),
+      0 4px 16px rgba(0,0,0,0.03),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  /* Блик сверху */
+  .glass-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 5%;
+    right: 5%;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 50px 50px 50% 50%;
+    pointer-events: none;
+  }
+
+  /* Активная — чуть больше белого */
+  .glass-btn.active {
+    background: rgba(255,255,255,0.22);
+    font-weight: 600;
+    color: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.7);
+    border-top-color: rgba(255,255,255,0.9);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.06),
+      0 6px 20px rgba(0,0,0,0.03),
+      inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+
+  /* Rounded rect вариант (как на первой картинке) */
+  .glass-btn-rect {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    color: rgba(0,0,0,0.6);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.45);
+    border-top-color: rgba(255,255,255,0.65);
+    border-left-color: rgba(255,255,255,0.55);
+    border-bottom-color: rgba(255,255,255,0.15);
+    border-right-color: rgba(255,255,255,0.25);
+    box-shadow:
+      0 2px 4px rgba(0,0,0,0.04),
+      0 4px 12px rgba(0,0,0,0.02),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-btn-rect::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 8%; right: 8%; height: 45%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 12px 12px 50% 50%;
+    pointer-events: none;
+  }
+  .glass-btn-rect:hover { background: rgba(255,255,255,0.15); }
+  .glass-btn-rect.active {
+    background: rgba(255,255,255,0.2);
+    font-weight: 600;
+    color: rgba(0,0,0,0.8);
+    border-top-color: rgba(255,255,255,0.8);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.06),
+      0 6px 20px rgba(0,0,0,0.03),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- 1: Pill shape на светлом фоне -->
+<div class="section">
+  <h1>1. Pill (овальные) на светлом фоне</h1>
+  <div class="label">Как на второй картинке — прозрачные овальные кнопки</div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <button class="glass-btn active">
+      <span class="dot" style="background:#f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4);"></span>
+      Наша продукция нов
+    </button>
+    <button class="glass-btn">
+      <span class="dot" style="background:#3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.4);"></span>
+      Ижевск FBS нов
+    </button>
+    <button class="glass-btn">
+      <span class="dot" style="background:#a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.4);"></span>
+      Ижевск FBO
+    </button>
+    <button class="glass-btn">
+      <span class="dot" style="background:#22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4);"></span>
+      Наша продукция
+    </button>
+  </div>
+</div>
+
+<!-- 2: Rounded rect на светлом фоне -->
+<div class="section">
+  <h1>2. Прямоугольные со скруглением</h1>
+  <div class="label">Как на первой картинке — прозрачные прямоугольные</div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <button class="glass-btn-rect active">
+      <span class="dot" style="background:#f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4);"></span>
+      Наша продукция нов
+    </button>
+    <button class="glass-btn-rect">
+      <span class="dot" style="background:#3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.4);"></span>
+      Ижевск FBS нов
+    </button>
+    <button class="glass-btn-rect">
+      <span class="dot" style="background:#a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.4);"></span>
+      Ижевск FBO
+    </button>
+    <button class="glass-btn-rect">
+      <span class="dot" style="background:#22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4);"></span>
+      Наша продукция
+    </button>
+  </div>
+</div>
+
+<!-- 3: На белом фоне -->
+<div class="section" style="background: white; padding: 32px; border-radius: 20px;">
+  <h1 style="color: rgba(0,0,0,0.15);">3. На белом фоне (как на сайте)</h1>
+  <div class="label" style="color: rgba(0,0,0,0.2);">Адаптация под реальный сайт</div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <button class="glass-btn active" style="border-color: rgba(0,0,0,0.06); border-top-color: rgba(0,0,0,0.04); background: rgba(0,0,0,0.03); box-shadow: 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8);">
+      <span class="dot" style="background:#f59e0b;"></span>Наша продукция нов
+    </button>
+    <button class="glass-btn" style="border-color: rgba(0,0,0,0.04); background: transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.02), inset 0 1px 0 rgba(255,255,255,0.5);">
+      <span class="dot" style="background:#3b82f6;"></span>Ижевск FBS нов
+    </button>
+    <button class="glass-btn" style="border-color: rgba(0,0,0,0.04); background: transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.02), inset 0 1px 0 rgba(255,255,255,0.5);">
+      <span class="dot" style="background:#a855f7;"></span>Ижевск FBO
+    </button>
+    <button class="glass-btn" style="border-color: rgba(0,0,0,0.04); background: transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.02), inset 0 1px 0 rgba(255,255,255,0.5);">
+      <span class="dot" style="background:#22c55e;"></span>Наша продукция
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

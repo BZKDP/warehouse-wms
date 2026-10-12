@@ -1,0 +1,91 @@
+name: Deploy WMS to Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npx vite build --mode sklad
+
+      - name: Clean old frontend assets
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: rm -rf /var/www/<domain>/sklad/frontend/dist/assets/*
+
+      - name: Upload backend files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "backend/src/,backend/package.json,backend/package-lock.json"
+          target: /var/www/<domain>/sklad/
+          overwrite: true
+
+      - name: Upload frontend dist
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "frontend/dist/"
+          target: /var/www/<domain>/sklad/
+          overwrite: true
+
+      - name: Install deps and restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd /var/www/<domain>/sklad/backend
+            npm install --production
+            pm2 delete c-site 2>/dev/null || true
+            sleep 1
+            fuser -k 3017/tcp 2>/dev/null || true
+            sleep 1
+            pm2 start src/server.js --name c-site --cwd /var/www/<domain>/sklad/backend
+            pm2 save
+            MCONF=/etc/nginx/sites-enabled/messenger.conf
+            if [ -f "$MCONF" ] && ! grep -q "location \^~ /sklad/" "$MCONF"; then
+              echo "[nginx] injecting /sklad/ proxy block into messenger.conf"
+              BAK="${MCONF}.bak_pre_sklad_$(date +%s)"
+              cp "$MCONF" "$BAK"
+              LAST_BRACE=$(grep -n "^}" "$MCONF" | tail -1 | cut -d: -f1)
+              if [ -n "$LAST_BRACE" ]; then
+                head -n $((LAST_BRACE - 1)) "$MCONF" > /tmp/mconf.new
+                printf '\n    location = /sklad { return 301 /sklad/; }\n    location ^~ /sklad/ {\n        proxy_pass http://127.0.0.1:3017;\n        proxy_http_version 1.1;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        client_max_body_size 100M;\n    }\n}\n' >> /tmp/mconf.new
+                mv /tmp/mconf.new "$MCONF"
+                if nginx -t 2>&1; then
+                  nginx -s reload
+                  echo "[nginx] /sklad/ proxy injected and reloaded"
+                else
+                  echo "[nginx] config test FAILED — restoring backup"
+                  cp "$BAK" "$MCONF"
+                fi
+              fi
+            else
+              echo "[nginx] /sklad/ already present in messenger.conf"
+            fi
+            curl -sS -o /dev/null -w "[verify] /sklad/ -> %{http_code}\n" http://127.0.0.1/sklad/

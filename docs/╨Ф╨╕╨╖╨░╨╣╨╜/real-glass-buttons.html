@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Реальное стекло — кнопки складов</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 40px;
+    background: linear-gradient(145deg, #e8eaf0 0%, #c8cdd8 50%, #b0b8c8 100%);
+  }
+
+  h1 { font-size: 14px; font-weight: 700; color: rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 40px; }
+  .section { margin-bottom: 60px; text-align: center; }
+  .section h2 { font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.25); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+
+  /* === РЕАЛЬНОЕ СТЕКЛО === */
+
+  /* Контейнер — вдавленная стеклянная панель */
+  .glass-container {
+    display: inline-flex;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 16px;
+    /* Вдавленная поверхность */
+    background: linear-gradient(180deg, rgba(180,185,195,0.4) 0%, rgba(200,205,215,0.3) 100%);
+    box-shadow:
+      inset 0 2px 4px rgba(0,0,0,0.12),
+      inset 0 -1px 2px rgba(255,255,255,0.15),
+      0 1px 3px rgba(255,255,255,0.3);
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    border-bottom: 0.5px solid rgba(255,255,255,0.25);
+  }
+
+  /* Кнопка — стеклянная капля */
+  .glass-btn {
+    padding: 10px 22px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    color: rgba(0,0,0,0.4);
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .glass-btn:hover {
+    color: rgba(0,0,0,0.6);
+    background: rgba(255,255,255,0.15);
+  }
+
+  /* Выбранная — выпуклое стекло с бликом */
+  .glass-btn.active {
+    color: rgba(0,0,0,0.75);
+    font-weight: 600;
+    /* Стеклянная выпуклая поверхность */
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.85) 0%,
+      rgba(255,255,255,0.55) 45%,
+      rgba(255,255,255,0.40) 100%
+    );
+    /* Тень + внутреннее свечение */
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.10),
+      0 4px 12px rgba(0,0,0,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+      inset 0 -1px 2px rgba(0,0,0,0.04);
+    /* Тонкая стеклянная рамка */
+    border: 0.5px solid rgba(255,255,255,0.6);
+    border-top-color: rgba(255,255,255,0.8);
+    border-bottom-color: rgba(0,0,0,0.04);
+  }
+
+  /* Блик сверху */
+  .glass-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 10%;
+    right: 10%;
+    height: 40%;
+    border-radius: 8px 8px 50% 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+  }
+
+  /* Цветные точки */
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-amber { background: #f59e0b; box-shadow: 0 0 4px rgba(245,158,11,0.4); }
+  .dot-blue { background: #3b82f6; box-shadow: 0 0 4px rgba(59,130,246,0.4); }
+  .dot-purple { background: #a855f7; box-shadow: 0 0 4px rgba(168,85,247,0.4); }
+  .dot-green { background: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.4); }
+
+  /* === ЦВЕТНОЙ ВАРИАНТ — с лёгким цветным оттенком в стекле === */
+  .glass-btn.active-amber {
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.80) 0%,
+      rgba(251,191,36,0.12) 45%,
+      rgba(251,191,36,0.06) 100%
+    );
+    color: #92400e;
+  }
+  .glass-btn.active-blue {
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.80) 0%,
+      rgba(59,130,246,0.12) 45%,
+      rgba(59,130,246,0.06) 100%
+    );
+    color: #1e40af;
+  }
+  .glass-btn.active-purple {
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.80) 0%,
+      rgba(168,85,247,0.12) 45%,
+      rgba(168,85,247,0.06) 100%
+    );
+    color: #6b21a8;
+  }
+  .glass-btn.active-green {
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.80) 0%,
+      rgba(34,197,94,0.12) 45%,
+      rgba(34,197,94,0.06) 100%
+    );
+    color: #166534;
+  }
+  /* Общие стили для цветных активных */
+  .glass-btn.active-amber,
+  .glass-btn.active-blue,
+  .glass-btn.active-purple,
+  .glass-btn.active-green {
+    font-weight: 600;
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.10),
+      0 4px 12px rgba(0,0,0,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.9),
+      inset 0 -1px 2px rgba(0,0,0,0.04);
+    border: 0.5px solid rgba(255,255,255,0.6);
+    border-top-color: rgba(255,255,255,0.8);
+    border-bottom-color: rgba(0,0,0,0.04);
+    position: relative;
+  }
+  .glass-btn.active-amber::before,
+  .glass-btn.active-blue::before,
+  .glass-btn.active-purple::before,
+  .glass-btn.active-green::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 10%;
+    right: 10%;
+    height: 40%;
+    border-radius: 8px 8px 50% 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+  }
+
+  /* === НА БЕЛОМ ФОНЕ (как на сайте) === */
+  .glass-container-light {
+    display: inline-flex;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.05) 100%);
+    box-shadow:
+      inset 0 1px 3px rgba(0,0,0,0.06),
+      inset 0 -1px 1px rgba(255,255,255,0.5),
+      0 1px 2px rgba(255,255,255,0.8);
+  }
+
+  .glass-btn-light {
+    padding: 9px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    color: rgba(0,0,0,0.35);
+    background: transparent;
+    transition: all 0.25s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .glass-btn-light:hover { color: rgba(0,0,0,0.55); background: rgba(255,255,255,0.4); }
+  .glass-btn-light.active {
+    color: rgba(0,0,0,0.8);
+    font-weight: 600;
+    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.75) 100%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1);
+    border: 0.5px solid rgba(0,0,0,0.06);
+  }
+  .glass-btn-light.active::before {
+    content: '';
+    position: absolute;
+    top: 1px; left: 12%; right: 12%; height: 35%;
+    border-radius: 6px 6px 50% 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Стеклянные кнопки складов</h1>
+
+<!-- 1: Чистое стекло на сером -->
+<div class="section">
+  <h2>1. Чистое стекло (серый фон)</h2>
+  <div class="glass-container">
+    <button class="glass-btn active"><span class="dot dot-amber"></span>Наша продукция нов</button>
+    <button class="glass-btn"><span class="dot dot-blue"></span>Ижевск FBS нов</button>
+    <button class="glass-btn"><span class="dot dot-purple"></span>Ижевск FBO</button>
+    <button class="glass-btn"><span class="dot dot-green"></span>Наша продукция</button>
+  </div>
+</div>
+
+<!-- 2: Цветное стекло -->
+<div class="section">
+  <h2>2. Стекло с цветным оттенком</h2>
+  <div class="glass-container">
+    <button class="glass-btn active-amber"><span class="dot dot-amber"></span>Наша продукция нов</button>
+    <button class="glass-btn"><span class="dot dot-blue"></span>Ижевск FBS нов</button>
+    <button class="glass-btn"><span class="dot dot-purple"></span>Ижевск FBO</button>
+    <button class="glass-btn"><span class="dot dot-green"></span>Наша продукция</button>
+  </div>
+  <div class="glass-container" style="margin-top: 12px;">
+    <button class="glass-btn"><span class="dot dot-amber"></span>Наша продукция нов</button>
+    <button class="glass-btn active-blue"><span class="dot dot-blue"></span>Ижевск FBS нов</button>
+    <button class="glass-btn"><span class="dot dot-purple"></span>Ижевск FBO</button>
+    <button class="glass-btn"><span class="dot dot-green"></span>Наша продукция</button>
+  </div>
+</div>
+
+<!-- 3: На белом фоне (как на сайте) -->
+<div class="section" style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 4px 24px rgba(0,0,0,0.06);">
+  <h2 style="color: rgba(0,0,0,0.2);">3. На белом фоне (как на сайте)</h2>
+  <div class="glass-container-light">
+    <button class="glass-btn-light active"><span class="dot dot-amber"></span>Наша продукция нов</button>
+    <button class="glass-btn-light"><span class="dot dot-blue"></span>Ижевск FBS нов</button>
+    <button class="glass-btn-light"><span class="dot dot-purple"></span>Ижевск FBO</button>
+    <button class="glass-btn-light"><span class="dot dot-green"></span>Наша продукция</button>
+  </div>
+</div>
+
+</body>
+</html>

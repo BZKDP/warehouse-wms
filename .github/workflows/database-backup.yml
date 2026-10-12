@@ -1,0 +1,149 @@
+name: Backup PostgreSQL database
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Encrypted database backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSHPASS: ${{ secrets.SSH_PASSWORD }}
+      # Рекомендуется отдельный DB_BACKUP_PASSPHRASE. Fallback позволяет
+      # запустить бэкапы сразу, используя уже настроенный секрет деплоя.
+      BACKUP_PASSPHRASE: ${{ secrets.DB_BACKUP_PASSPHRASE || secrets.SSH_PASSWORD }}
+
+    steps:
+      - name: Prepare backup tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          docker pull postgres:18
+
+      - name: Read database connection from server
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          ssh-keyscan -H "$SSH_HOST" >> "$HOME/.ssh/known_hosts"
+
+          encoded_config="$(
+            sshpass -e ssh -T \
+              -o ConnectTimeout=15 \
+              -o PasswordAuthentication=yes \
+              "$SSH_USER@$SSH_HOST" '
+                set -eu
+                ENV_FILE=/var/www/<domain>/sklad/backend/.env
+                test -r "$ENV_FILE"
+
+                for key in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD DB_SSL; do
+                  value="$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1 | tr -d "\r")"
+                  case "$value" in
+                    \"*\") value="${value#\"}"; value="${value%\"}" ;;
+                    \047*\047) value="${value#\047}"; value="${value%\047}" ;;
+                  esac
+                  printf "%s=%s\n" "$key" "$(printf "%s" "$value" | base64 -w 0)"
+                done
+              '
+          )"
+
+          while IFS='=' read -r key encoded_value; do
+            test -n "$key"
+            decoded_value="$(printf "%s" "$encoded_value" | base64 --decode)"
+            if [[ "$key" == "DB_PASSWORD" || "$key" == "DB_USER" ]]; then
+              echo "::add-mask::$decoded_value"
+            fi
+            printf "%s=%s\n" "$key" "$decoded_value" >> "$GITHUB_ENV"
+          done <<< "$encoded_config"
+
+      - name: Create, verify and encrypt backup
+        id: create
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DB_HOST:-}"
+          test -n "${DB_NAME:-}"
+          test -n "${DB_USER:-}"
+          test -n "${DB_PASSWORD:-}"
+          test -n "${BACKUP_PASSPHRASE:-}"
+
+          timestamp="$(date -u +'%Y-%m-%d_%H-%M-%S_UTC')"
+          backup_name="sklad-db_${timestamp}"
+          raw_file="$RUNNER_TEMP/${backup_name}.dump"
+          encrypted_file="${raw_file}.enc"
+
+          ssl_mode=disable
+          if [[ "${DB_SSL:-false}" == "true" ]]; then
+            ssl_mode=require
+          fi
+
+          export PGPASSWORD="$DB_PASSWORD"
+          export PGSSLMODE="$ssl_mode"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e PGPASSWORD \
+            -e PGSSLMODE \
+            -v "$RUNNER_TEMP:/backup" \
+            postgres:18 \
+            pg_dump \
+              --host="$DB_HOST" \
+              --port="${DB_PORT:-5432}" \
+              --username="$DB_USER" \
+              --dbname="$DB_NAME" \
+              --format=custom \
+              --compress=9 \
+              --no-owner \
+              --no-acl \
+              --file="/backup/$(basename "$raw_file")"
+
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$RUNNER_TEMP:/backup:ro" \
+            postgres:18 \
+            pg_restore --list "/backup/$(basename "$raw_file")" > /dev/null
+
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
+            -in "$raw_file" \
+            -out "$encrypted_file" \
+            -pass env:BACKUP_PASSPHRASE
+
+          shred -u "$raw_file" 2>/dev/null || rm -f "$raw_file"
+          (
+            cd "$RUNNER_TEMP"
+            sha256sum "$(basename "$encrypted_file")" > "$(basename "$encrypted_file").sha256"
+          )
+
+          {
+            echo "created_at=$timestamp"
+            echo "database=$DB_NAME"
+            echo "format=PostgreSQL custom dump encrypted with AES-256-CBC/PBKDF2"
+          } > "${encrypted_file}.txt"
+
+          echo "artifact_name=$backup_name" >> "$GITHUB_OUTPUT"
+          echo "encrypted_file=$encrypted_file" >> "$GITHUB_OUTPUT"
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.create.outputs.artifact_name }}
+          path: |
+            ${{ steps.create.outputs.encrypted_file }}
+            ${{ steps.create.outputs.encrypted_file }}.sha256
+            ${{ steps.create.outputs.encrypted_file }}.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+
+      - name: Remove backup from runner
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${{ steps.create.outputs.encrypted_file }}" ]]; then
+            rm -f \
+              "${{ steps.create.outputs.encrypted_file }}" \
+              "${{ steps.create.outputs.encrypted_file }}.sha256" \
+              "${{ steps.create.outputs.encrypted_file }}.txt"
+          fi
